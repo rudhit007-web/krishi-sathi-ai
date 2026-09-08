@@ -1,9 +1,9 @@
-const SUPABASE_URL = "YOUR_SUPABASE_URL";
-const SUPABASE_PUBLISHABLE_KEY = "YOUR_SUPABASE_PUBLISHABLE_KEY";
+const supabase_url = window.KRISHISAATHI_SUPABASE_URL;
+const supabase_publishable_key = window.KRISHISAATHI_SUPABASE_KEY;
 
 const supabaseClient = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY
+    supabase_url,
+    supabase_publishable_key
 );
 
 
