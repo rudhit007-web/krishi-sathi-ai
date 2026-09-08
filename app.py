@@ -304,6 +304,78 @@ buyer availability must be checked locally. This is decision support, not a subs
         base["mode"] = "local-fallback"
         return jsonify(base)
 
+@app.post("/api/farm-records")
+def save_farm_record():
+
+    token = get_supabase_token()
+
+    user = get_supabase_user(token)
+
+    if not user:
+        return jsonify({
+            "error": "Authentication required"
+        }), 401
+
+    data = request.get_json(force=True)
+
+    record = {
+        "user_id": user["id"],
+
+        "location":
+            data.get("location"),
+
+        "district":
+            data.get("district"),
+
+        "crop":
+            data.get("crop"),
+
+        "quantity":
+            data.get("quantity"),
+
+        "expected_harvest_date":
+            data.get("expected_harvest_date"),
+
+        "selling_route":
+            data.get("selling_route"),
+
+        "soil":
+            data.get("soil", {}),
+
+        "weather":
+            data.get("weather", {}),
+
+        "plan":
+            data.get("plan", {})
+    }
+
+    response = requests.post(
+        f"{SUPABASE_URL}/rest/v1/farm_records",
+        headers={
+            **supabase_headers(token),
+            "Prefer": "return=representation"
+        },
+        json=record,
+        timeout=15
+    )
+
+    if response.status_code >= 400:
+
+        print(
+            "Supabase save error:",
+            response.text
+        )
+
+        return jsonify({
+            "error":
+                "Unable to save farm record"
+        }), 500
+
+    return jsonify({
+        "success": True,
+        "record": response.json()
+    })
+
 @app.post("/api/chat")
 def chat():
     data = request.get_json(force=True)
