@@ -138,122 +138,138 @@ buyer availability must be checked locally. This is decision support, not a subs
 
 @app.post("/api/chat")
 def chat():
-    data=request.get_json(force=True)
+    data = request.get_json(force=True)
+
     if not GEMINI_API_KEY:
-        return jsonify({"answer":"I am in demo mode. Add a Gemini API key to enable live AI answers. For now, use Farm Plan to generate your soil, crop, roadmap and selling plan.","mode":"local"})
-    lang=data.get("language","English")
-    system=f"""You are KrishiSaathi AI. Answer in {lang}, using simple farmer-friendly language.
-Use the supplied crop, soil, weather and market context. Be practical. Do not invent pesticide doses. Encourage local
-expert verification for disease or chemical treatment. If asked how to sell, give actionable options such as mandi/APMC,
-FPO/FPC, retailers, processors, direct consumers and e-NAM where applicable."""
-    prompt=system+"\n\nContext:\n"+json.dumps(data,ensure_ascii=False)
-try:
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+        return jsonify({
+            "answer": "I am in demo mode. Add a Gemini API key to enable live AI answers. For now, use Farm Plan to generate your soil, crop, roadmap and selling plan.",
+            "mode": "local"
+        })
 
-    headers = {
-        "x-goog-api-key": GEMINI_API_KEY,
-        "Content-Type": "application/json"
-    }
+    lang = data.get("language", "English")
 
-    payload = {
-        "systemInstruction": {
-            "parts": [
-                {
-                    "text": system
-                }
-            ]
-        },
-        "contents": [
-            {
-                "role": "user",
-                "parts": [
-                    {
-                        "text": prompt
-                    }
-                ]
-            }
-        ],
-        "generationConfig": {
-            "temperature": 0.3,
-            "maxOutputTokens": 700
-        }
-    }
+    system = f"""You are KrishiSaathi AI.
+Answer in {lang}, using simple farmer-friendly language.
 
-    r = requests.post(
-        url,
-        headers=headers,
-        json=payload,
-        timeout=30
+Use the supplied crop, soil, weather and market context.
+Be practical and easy to understand.
+
+Do not invent pesticide doses.
+For disease or chemical treatment, encourage verification
+with a local agricultural expert.
+
+If asked how to sell, give actionable options such as:
+APMC/mandi, FPO/FPC, retailers, processors,
+direct consumers and e-NAM where applicable.
+"""
+
+    prompt = system + "\n\nFarmer Context:\n" + json.dumps(
+        data,
+        ensure_ascii=False
     )
 
-    # IMPORTANT: print Gemini's actual error in Render logs
-    if r.status_code != 200:
-        print("GEMINI API ERROR:")
-        print("Status:", r.status_code)
-        print("Response:", r.text)
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+
+        headers = {
+            "x-goog-api-key": GEMINI_API_KEY,
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "systemInstruction": {
+                "parts": [
+                    {
+                        "text": system
+                    }
+                ]
+            },
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.3,
+                "maxOutputTokens": 700
+            }
+        }
+
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+
+        print("Gemini status:", response.status_code)
+
+        if response.status_code != 200:
+            print("Gemini error:", response.text)
+
+            return jsonify({
+                "answer": "Gemini API returned an error. Please check the Render logs.",
+                "mode": "api-error"
+            }), 500
+
+        result = response.json()
+
+        candidates = result.get("candidates", [])
+
+        if not candidates:
+            print("Gemini returned no candidates:", result)
+
+            return jsonify({
+                "answer": "Gemini returned no answer. Please try again.",
+                "mode": "api-error"
+            }), 500
+
+        parts = candidates[0].get("content", {}).get("parts", [])
+
+        if not parts:
+            print("Gemini returned no text:", result)
+
+            return jsonify({
+                "answer": "Gemini returned an empty response.",
+                "mode": "api-error"
+            }), 500
+
+        answer = parts[0].get("text", "")
 
         return jsonify({
-            "answer": "Gemini API error. Check the Render logs for the exact reason.",
-            "mode": "api-error"
-        }), 500
+            "answer": answer,
+            "mode": "gemini"
+        })
 
-    response_data = r.json()
-
-    print("GEMINI RESPONSE RECEIVED")
-
-    candidates = response_data.get("candidates", [])
-
-    if not candidates:
-        print("No candidates returned:")
-        print(response_data)
+    except requests.exceptions.Timeout:
+        print("Gemini request timed out")
 
         return jsonify({
-            "answer": "Gemini returned no answer. Check Render logs.",
-            "mode": "api-error"
+            "answer": "Gemini request timed out. Please try again.",
+            "mode": "timeout"
         }), 500
 
-    parts = candidates[0].get("content", {}).get("parts", [])
-
-    if not parts:
-        print("No response parts:")
-        print(response_data)
+    except requests.exceptions.RequestException as e:
+        print("Gemini connection error:", repr(e))
 
         return jsonify({
-            "answer": "Gemini returned an empty response.",
-            "mode": "api-error"
+            "answer": "Could not connect to Gemini API.",
+            "mode": "connection-error"
         }), 500
 
-    answer = parts[0].get("text", "")
+    except Exception as e:
+        print("Gemini unexpected error:", repr(e))
 
-    return jsonify({
-        "answer": answer,
-        "mode": "gemini"
-    })
-
-except requests.exceptions.Timeout:
-    print("GEMINI ERROR: Request timed out")
-
-    return jsonify({
-        "answer": "Gemini request timed out. Please try again.",
-        "mode": "timeout"
-    }), 500
-
-except requests.exceptions.RequestException as e:
-    print("GEMINI REQUEST ERROR:", repr(e))
-
-    return jsonify({
-        "answer": "Could not connect to Gemini API.",
-        "mode": "connection-error"
-    }), 500
-
-except Exception as e:
-    print("GEMINI UNEXPECTED ERROR:", repr(e))
-
-    return jsonify({
-        "answer": "An unexpected Gemini error occurred. Check Render logs.",
-        "mode": "error"
-    }), 500
-
+        return jsonify({
+            "answer": "An unexpected Gemini error occurred. Check Render logs.",
+            "mode": "error"
+        }), 500
+        
 @app.get("/health")
 def health(): return jsonify({"status":"ok"})
 
