@@ -120,20 +120,60 @@ tell the farmer to follow the product label and local agriculture authority. For
 APMC/mandi, FPO/FPC, retailers/processors, direct consumers and e-NAM where applicable. Mention that actual prices and
 buyer availability must be checked locally. This is decision support, not a substitute for an agricultural expert."""
     prompt=system+"\n\nFARM DATA:\n"+json.dumps(data,ensure_ascii=False)
-    try:
-        url=f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-        headers={"x-goog-api-key":GEMINI_API_KEY,"Content-Type":"application/json"}
-        payload={"systemInstruction":{"parts":[{"text":system}]},
-                 "contents":[{"parts":[{"text":prompt}]}],
-                 "generationConfig":{"temperature":0.25,"maxOutputTokens":1600,"responseMimeType":"application/json"}}
-        r=requests.post(url,headers=headers,json=payload,timeout=35); r.raise_for_status()
-        txt=r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        ai=json.loads(txt)
-        ai["mode"]="gemini"
-        ai["score"]=base["score"]; ai["crop"]=data.get("crop")
+        try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+
+        headers = {
+            "x-goog-api-key": GEMINI_API_KEY,
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "systemInstruction": {
+                "parts": [
+                    {
+                        "text": system
+                    }
+                ]
+            },
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.25,
+                "maxOutputTokens": 1600,
+                "responseMimeType": "application/json"
+            }
+        }
+
+        r = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=35
+        )
+
+        r.raise_for_status()
+
+        txt = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+        ai = json.loads(txt)
+
+        ai["mode"] = "gemini"
+        ai["score"] = base["score"]
+        ai["crop"] = data.get("crop")
+
         return jsonify(ai)
+
     except Exception as e:
-        base["mode"]="local-fallback"
+        print("Gemini plan error:", repr(e))
+        base["mode"] = "local-fallback"
         return jsonify(base)
 
 @app.post("/api/chat")
