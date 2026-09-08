@@ -1,13 +1,40 @@
-import os, json, math
+import os
+import json
+import math
+
 from flask import Flask, render_template, request, jsonify
+
 import requests
+
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
+
 app = Flask(__name__)
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
+
+GEMINI_API_KEY = os.getenv(
+    "GEMINI_API_KEY",
+    ""
+).strip()
+
+GEMINI_MODEL = os.getenv(
+    "GEMINI_MODEL",
+    "gemini-2.5-flash"
+)
+
+
+SUPABASE_URL = os.getenv(
+    "SUPABASE_URL",
+    ""
+).strip()
+
+SUPABASE_PUBLISHABLE_KEY = os.getenv(
+    "SUPABASE_PUBLISHABLE_KEY",
+    ""
+).strip()
 
 CROPS = {
     "Wheat": {"season":"Rabi", "ph":[6.0,7.5], "water":"Moderate", "temp":[10,25], "n":"Medium-High", "roadmap":["Seed selection & land preparation","Sowing + first irrigation","Tillering & nutrient management","Disease/pest scouting","Grain filling + final irrigation","Harvest, grading & market preparation"]},
@@ -85,7 +112,29 @@ def fallback_plan(data):
     }
 
 @app.route("/")
-def home(): return render_template("index.html")
+def home():
+    return render_template(
+        "index.html",
+        supabase_url=SUPABASE_URL,
+        supabase_publishable_key=SUPABASE_PUBLISHABLE_KEY
+    )
+
+@app.route("/login")
+def login():
+    return render_template(
+        "login.html",
+        supabase_url=SUPABASE_URL,
+        supabase_publishable_key=SUPABASE_PUBLISHABLE_KEY
+    )
+
+
+@app.route("/signup")
+def signup():
+    return render_template(
+        "signup.html",
+        supabase_url=SUPABASE_URL,
+        supabase_publishable_key=SUPABASE_PUBLISHABLE_KEY
+    )
 
 @app.route("/api/crops")
 def crops(): return jsonify(CROPS)
