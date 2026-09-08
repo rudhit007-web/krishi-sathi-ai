@@ -120,7 +120,7 @@ tell the farmer to follow the product label and local agriculture authority. For
 APMC/mandi, FPO/FPC, retailers/processors, direct consumers and e-NAM where applicable. Mention that actual prices and
 buyer availability must be checked locally. This is decision support, not a substitute for an agricultural expert."""
     prompt=system+"\n\nFARM DATA:\n"+json.dumps(data,ensure_ascii=False)
-        try:
+    try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
         headers = {
