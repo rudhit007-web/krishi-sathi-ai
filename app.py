@@ -153,6 +153,43 @@ def fallback_plan(data):
       "disclaimer":"Prototype decision support only. Confirm crop, fertilizer and plant-protection decisions with local agricultural experts and product labels."
     }
 
+@app.get("/api/farm-records")
+def get_farm_records():
+
+    token = get_supabase_token()
+
+    user = get_supabase_user(token)
+
+    if not user:
+        return jsonify({
+            "error": "Authentication required"
+        }), 401
+
+    response = requests.get(
+        f"{SUPABASE_URL}/rest/v1/farm_records",
+        headers=supabase_headers(token),
+        params={
+            "select": "*",
+            "order": "created_at.desc"
+        },
+        timeout=15
+    )
+
+    if response.status_code >= 400:
+
+        print(
+            "Supabase history error:",
+            response.text
+        )
+
+        return jsonify({
+            "error": "Unable to load farm history"
+        }), 500
+
+    return jsonify({
+        "records": response.json()
+    })
+
 @app.route("/")
 def home():
     return render_template(
