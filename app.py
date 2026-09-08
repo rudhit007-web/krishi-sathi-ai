@@ -50,6 +50,48 @@ CROPS = {
 
 def clamp(v,a,b): return max(a,min(b,v))
 
+def get_supabase_token():
+    auth_header = request.headers.get(
+        "Authorization",
+        ""
+    )
+
+    if not auth_header.startswith("Bearer "):
+        return None
+
+    return auth_header.split(
+        " ",
+        1
+    )[1].strip()
+
+
+def supabase_headers(token):
+    return {
+        "apikey": SUPABASE_PUBLISHABLE_KEY,
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+
+def get_supabase_user(token):
+
+    if not token:
+        return None
+
+    response = requests.get(
+        f"{SUPABASE_URL}/auth/v1/user",
+        headers={
+            "apikey": SUPABASE_PUBLISHABLE_KEY,
+            "Authorization": f"Bearer {token}"
+        },
+        timeout=15
+    )
+
+    if response.status_code != 200:
+        return None
+
+    return response.json()
+
 def recommend_crops(soil, weather):
     ph = float(soil.get("ph") or 6.5)
     moisture = float(soil.get("moisture") or 45)
