@@ -147,17 +147,112 @@ Use the supplied crop, soil, weather and market context. Be practical. Do not in
 expert verification for disease or chemical treatment. If asked how to sell, give actionable options such as mandi/APMC,
 FPO/FPC, retailers, processors, direct consumers and e-NAM where applicable."""
     prompt=system+"\n\nContext:\n"+json.dumps(data,ensure_ascii=False)
-    try:
-        url=f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-        r=requests.post(url,headers={"x-goog-api-key":GEMINI_API_KEY,"Content-Type":"application/json"},
-                        json={"systemInstruction":{"parts":[{"text":system}]},
-                              "contents":[{"parts":[{"text":prompt}]}],
-                              "generationConfig":{"temperature":0.3,"maxOutputTokens":700}},timeout=30)
-        r.raise_for_status()
-        answer=r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        return jsonify({"answer":answer,"mode":"gemini"})
-    except:
-        return jsonify({"answer":"AI service is temporarily unavailable. Please use the Farm Plan or try again later.","mode":"fallback"})
+try:
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+
+    headers = {
+        "x-goog-api-key": GEMINI_API_KEY,
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "systemInstruction": {
+            "parts": [
+                {
+                    "text": system
+                }
+            ]
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": prompt
+                    }
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.3,
+            "maxOutputTokens": 700
+        }
+    }
+
+    r = requests.post(
+        url,
+        headers=headers,
+        json=payload,
+        timeout=30
+    )
+
+    # IMPORTANT: print Gemini's actual error in Render logs
+    if r.status_code != 200:
+        print("GEMINI API ERROR:")
+        print("Status:", r.status_code)
+        print("Response:", r.text)
+
+        return jsonify({
+            "answer": "Gemini API error. Check the Render logs for the exact reason.",
+            "mode": "api-error"
+        }), 500
+
+    response_data = r.json()
+
+    print("GEMINI RESPONSE RECEIVED")
+
+    candidates = response_data.get("candidates", [])
+
+    if not candidates:
+        print("No candidates returned:")
+        print(response_data)
+
+        return jsonify({
+            "answer": "Gemini returned no answer. Check Render logs.",
+            "mode": "api-error"
+        }), 500
+
+    parts = candidates[0].get("content", {}).get("parts", [])
+
+    if not parts:
+        print("No response parts:")
+        print(response_data)
+
+        return jsonify({
+            "answer": "Gemini returned an empty response.",
+            "mode": "api-error"
+        }), 500
+
+    answer = parts[0].get("text", "")
+
+    return jsonify({
+        "answer": answer,
+        "mode": "gemini"
+    })
+
+except requests.exceptions.Timeout:
+    print("GEMINI ERROR: Request timed out")
+
+    return jsonify({
+        "answer": "Gemini request timed out. Please try again.",
+        "mode": "timeout"
+    }), 500
+
+except requests.exceptions.RequestException as e:
+    print("GEMINI REQUEST ERROR:", repr(e))
+
+    return jsonify({
+        "answer": "Could not connect to Gemini API.",
+        "mode": "connection-error"
+    }), 500
+
+except Exception as e:
+    print("GEMINI UNEXPECTED ERROR:", repr(e))
+
+    return jsonify({
+        "answer": "An unexpected Gemini error occurred. Check Render logs.",
+        "mode": "error"
+    }), 500
 
 @app.get("/health")
 def health(): return jsonify({"status":"ok"})
