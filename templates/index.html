@@ -18,6 +18,68 @@
 </head>
 <body>
 <header class="nav">
+  <div class="nav-actions">
+
+    <button
+        id="historyBtn"
+        class="nav-button"
+        onclick="openHistory()"
+    >
+        🌾 History
+    </button>
+
+    <button
+        id="loginBtn"
+        class="nav-button"
+        onclick="window.location.href='/login'"
+    >
+        👤 Login
+    </button>
+
+</div>
+<section
+    id="historySection"
+    class="history-section"
+    style="display: none;"
+>
+
+    <div class="history-container">
+
+        <div class="history-title">
+
+            <div>
+                <span class="section-label">
+                    FARM HISTORY
+                </span>
+
+                <h2>My Farm History</h2>
+
+                <p>
+                    View your previous crop plans and
+                    farming recommendations.
+                </p>
+            </div>
+
+            <button
+                class="close-history"
+                onclick="closeHistory()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <div id="farmHistory">
+
+            <p>
+                Loading your farm history...
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
   <div class="brand"><div class="mark">✦</div><div><b>KrishiSaathi</b><small>AI • From soil to sale</small></div></div>
   <nav><button data-scroll="home" class="active">Home</button><button data-scroll="farm">Farm Check</button><button data-scroll="roadmap">Roadmap</button><button data-scroll="market">Sell Crop</button><button data-scroll="assistant">AI Help</button></nav>
   <div class="lang"><span>文</span><select id="language"><option>English</option><option>Hindi</option><option>Marathi</option></select></div>
